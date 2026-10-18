@@ -1,0 +1,18 @@
+[Unit]
+Description=Noryx Hosting application
+After=network.target postgresql.service redis-server.service
+[Service]
+User=noryx
+Group=noryx
+WorkingDirectory=/opt/noryx/app
+EnvironmentFile=/etc/noryx.env
+ExecStart=/opt/noryx/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8081 --timeout 30 wsgi:app
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/noryx/app/instance
+[Install]
+WantedBy=multi-user.target

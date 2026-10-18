@@ -1,0 +1,14 @@
+/* Color-only contrast corrections. Existing geometry and component classes remain. */
+:root { color-scheme: dark; }
+:is(a,button,[role="button"]):is([class~="bg-violet-500"],[class~="bg-violet-600"],[class~="bg-purple-500"],[class~="bg-purple-600"],[class~="bg-accent-primary"],[class~="bg-[#fff000]"],[class~="bg-[#eab308]"]) { color:#171500; }
+:is(a,button):is([class~="bg-violet-500"],[class~="bg-violet-600"],[class~="bg-purple-600"],[class~="bg-accent-primary"],[class~="bg-[#fff000]"]) :is(span,svg) { color:inherit; }
+.btn-primary { background-color:#fff000; border-color:#eab308; color:#171500; }
+.btn-primary:hover,.btn-primary:focus { background-color:#eab308; border-color:#ca8a04; color:#171500; }
+::selection { background:rgba(250,204,21,.3); }
+
+/* Contrast correction for yellow gradients and the dark login button. */
+header a[class*="bg-[#fff000]"] {color:#fff000!important;}
+a[class*="from-violet-"],button[class*="from-violet-"] {color:#171500;}
+
+/* Dark gradient buttons retain light text. */
+:is(a,button)[class~="from-zinc-800"],:is(a,button)[class~="from-zinc-800"] :is(span,svg){color:#e5e7eb!important;}

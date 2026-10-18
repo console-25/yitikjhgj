@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search this clone</title>
+<style>
+:root { color-scheme: light dark; --accent: #4778d8; --muted: #687085; --line: #8a93a833; --panel: #ffffff; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; max-width: 980px; margin: 2rem auto; padding: 0 1rem 3rem; line-height: 1.5; }
+h1 { margin-bottom: .25rem; letter-spacing: -.03em; }
+.lede { margin-top: 0; color: var(--muted); }
+.controls { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px; gap: .6rem; margin: 1.4rem 0 .8rem; }
+input, select, button { min-height: 42px; padding: .55rem .75rem; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: inherit; font: inherit; }
+input { width: 100%; font-size: 1rem; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: .6rem 0 1rem; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+#status, #count { color: var(--muted); font-size: .9rem; }
+#count { margin-left: auto; }
+.entry { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 1rem; margin: 1rem 0; padding: 1rem 1.1rem; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 94%, transparent); }
+.entry-body { min-width: 0; }
+.entry h2 { margin: 0 0 .25rem; font-size: 1.08rem; }
+.entry h2 a { text-decoration: none; }
+.entry .url { color: var(--muted); font-size: .84rem; word-break: break-all; }
+.entry .text { font-size: .92rem; margin: .55rem 0 0; color: var(--muted); }
+.entry .text mark, .entry h2 mark { background: #ffe08a; color: #171717; }
+.entry .headings { margin: .45rem 0 0; color: var(--muted); font-size: .86rem; }
+.entry img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #8882; }
+.badge { display: inline-block; margin-top: .55rem; padding: .12rem .42rem; border-radius: 5px; background: #8882; color: var(--muted); font-size: .75rem; }
+.badge.good { color: #19734a; background: #39a56c22; }
+.badge.bad { color: #a83244; background: #e0526822; }
+.empty { padding: 2rem 0; color: var(--muted); }
+@media (prefers-color-scheme: dark) {
+  :root { --panel: #151a25; --muted: #a7b0c3; }
+  .badge.good { color: #70e5aa; }
+  .badge.bad { color: #ff91a2; }
+}
+@media (max-width: 700px) {
+  .controls { grid-template-columns: 1fr; }
+  .entry { grid-template-columns: 1fr; }
+  .entry img { max-height: 220px; }
+  #count { margin-left: 0; width: 100%; }
+}
+</style>
+<link rel="icon" type="image/png" href="/assets/brand/noryx-logo.png"><link rel="stylesheet" href="/assets/css/noryx-overrides.css?v=noryx3"><script src="/assets/js/noryx-runtime.js?v=noryx3"></script></head>
+<body>
+<h1>Search this clone</h1>
+<p class="lede">Fuzzy search across page titles, headings, URLs, and extracted text.</p>
+<div class="controls">
+  <input id="q" type="search" placeholder="Search pages..." autofocus>
+  <select id="status-filter" aria-label="Filter by HTTP status">
+    <option value="all">All statuses</option>
+    <option value="2xx">Success (2xx)</option>
+    <option value="3xx">Redirects (3xx)</option>
+    <option value="4xx">Client errors (4xx)</option>
+    <option value="5xx">Server errors (5xx)</option>
+  </select>
+  <select id="asset-filter" aria-label="Filter by screenshot">
+    <option value="all">All pages</option>
+    <option value="screenshots">With screenshots</option>
+  </select>
+</div>
+<div class="toolbar">
+  <label>Sort <select id="sort"><option value="relevance">Relevance</option><option value="title">Title</option><option value="status">Status</option></select></label>
+  <button id="previous" type="button">Previous</button>
+  <button id="next" type="button">Next</button>
+  <span id="status">Loading index...</span>
+  <span id="count"></span>
+</div>
+<div id="results"></div>
+<script>
+const PAGE_SIZE = 20;
+let entries = [];
+let loaded = false;
+let currentPage = 0;
+const input = document.getElementById('q');
+const statusFilter = document.getElementById('status-filter');
+const assetFilter = document.getElementById('asset-filter');
+const sortSelect = document.getElementById('sort');
+const previous = document.getElementById('previous');
+const next = document.getElementById('next');
+const resultsEl = document.getElementById('results');
+const statusEl = document.getElementById('status');
+const countEl = document.getElementById('count');
+
+fetch('./search-index.json')
+  .then((response) => { if (!response.ok) throw new Error(response.status); return response.json(); })
+  .then((data) => {
+    entries = Array.isArray(data.entries) ? data.entries : [];
+    loaded = true;
+    statusEl.textContent = entries.length + ' pages indexed. Search is performed locally.';
+    render();
+  })
+  .catch(() => { statusEl.textContent = 'Index not found (search-index.json is missing).'; });
+
+function normalize(value) {
+  return String(value || '').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/gu, '');
+}
+
+function words(value) {
+  return normalize(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean).slice(0, 120);
+}
+
+function editDistance(left, right) {
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= left.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= right.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (left[row - 1] === right[column - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length];
+}
+
+function termScore(term, value) {
+  const haystack = normalize(value);
+  if (!haystack) return 0;
+  if (haystack.includes(term)) return haystack.startsWith(term) ? 1.35 : 1;
+  let best = 0;
+  for (const word of words(value)) {
+    if (word.startsWith(term)) best = Math.max(best, .78);
+    const limit = Math.max(1, Math.ceil(term.length * .3));
+    if (Math.abs(word.length - term.length) <= limit) {
+      const distance = editDistance(term, word);
+      if (distance <= limit) best = Math.max(best, .52 - (distance / Math.max(1, term.length)) * .12);
+    }
+  }
+  return best;
+}
+
+function scoreEntry(entry, terms) {
+  if (terms.length === 0) return 0;
+  const fields = [
+    [entry.title, 12],
+    [(entry.headings || []).join(' '), 8],
+    [entry.url, 5],
+    [entry.text, 2],
+  ];
+  let score = 0;
+  for (const term of terms) {
+    let best = 0;
+    for (const [value, weight] of fields) best = Math.max(best, termScore(term, value) * weight);
+    if (best === 0) return null;
+    score += best;
+  }
+  return score;
+}
+
+function matchesStatus(entry, filter) {
+  if (filter === 'all') return true;
+  const status = Number(entry.status) || 0;
+  return Math.floor(status / 100) + 'xx' === filter;
+}
+
+function highlight(value, terms) {
+  let result = escapeHtml(value || '');
+  for (const term of terms) {
+    const escaped = term.replace(/[.*+?^()|[\]\\{}$]/gu, '\\$&');
+    if (escaped.length > 0) result = result.replace(new RegExp('(' + escaped + ')', 'giu'), '<mark>$1</mark>');
+  }
+  return result;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/gu, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+}
+
+function screenshotHref(value) {
+  return value && value.startsWith('../') ? value : '../' + value;
+}
+
+function render() {
+  if (!loaded) return;
+  const query = normalize(input.value).trim();
+  const terms = query.split(/\s+/u).filter(Boolean);
+  const filtered = entries
+    .filter((entry) => matchesStatus(entry, statusFilter.value))
+    .filter((entry) => assetFilter.value !== 'screenshots' || Boolean(entry.screenshotPath))
+    .map((entry) => ({ entry, score: scoreEntry(entry, terms) }))
+    .filter((item) => item.score !== null);
+  filtered.sort((left, right) => {
+    if (sortSelect.value === 'title') return String(left.entry.title || left.entry.url).localeCompare(String(right.entry.title || right.entry.url));
+    if (sortSelect.value === 'status') return (Number(left.entry.status) || 0) - (Number(right.entry.status) || 0);
+    return (right.score || 0) - (left.score || 0) || String(left.entry.title || left.entry.url).localeCompare(String(right.entry.title || right.entry.url));
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  currentPage = Math.min(currentPage, totalPages - 1);
+  const visible = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  countEl.textContent = filtered.length + ' match' + (filtered.length === 1 ? '' : 'es') + ' | page ' + (currentPage + 1) + '/' + totalPages;
+  previous.disabled = currentPage === 0;
+  next.disabled = currentPage >= totalPages - 1;
+  resultsEl.replaceChildren();
+  if (visible.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = entries.length === 0 ? 'Index is empty.' : 'No pages match these filters.';
+    resultsEl.append(empty);
+    return;
+  }
+  visible.forEach(({ entry }) => {
+    const article = document.createElement('article');
+    article.className = 'entry';
+    const body = document.createElement('div');
+    body.className = 'entry-body';
+    const heading = document.createElement('h2');
+    const link = document.createElement('a');
+    link.href = entry.localPath || '#';
+    link.innerHTML = highlight(entry.title || entry.url || 'Untitled page', terms);
+    heading.append(link);
+    body.append(heading);
+    const url = document.createElement('div');
+    url.className = 'url';
+    url.textContent = entry.url || '';
+    body.append(url);
+    if (entry.headings && entry.headings.length) {
+      const headings = document.createElement('div');
+      headings.className = 'headings';
+      headings.innerHTML = highlight(entry.headings.slice(0, 3).join(' | '), terms);
+      body.append(headings);
+    }
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = entry.status || 'status unknown';
+    if (Number(entry.status) >= 200 && Number(entry.status) < 400) badge.classList.add('good');
+    if (Number(entry.status) >= 400) badge.classList.add('bad');
+    body.append(badge);
+    const text = document.createElement('p');
+    text.className = 'text';
+    text.innerHTML = highlight(entry.text || 'No extracted text.', terms);
+    body.append(text);
+    article.append(body);
+    if (entry.screenshotPath) {
+      const image = document.createElement('img');
+      image.src = screenshotHref(entry.screenshotPath);
+      image.alt = 'Screenshot of ' + (entry.title || entry.url || 'page');
+      image.loading = 'lazy';
+      article.append(image);
+    }
+    resultsEl.append(article);
+  });
+}
+
+function resetPage() { currentPage = 0; render(); }
+input.addEventListener('input', resetPage);
+statusFilter.addEventListener('change', resetPage);
+assetFilter.addEventListener('change', resetPage);
+sortSelect.addEventListener('change', resetPage);
+previous.addEventListener('click', () => { currentPage = Math.max(0, currentPage - 1); render(); });
+next.addEventListener('click', () => { currentPage += 1; render(); });
+</script>
+</body>
+</html>

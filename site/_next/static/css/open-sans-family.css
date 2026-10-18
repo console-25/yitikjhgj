@@ -1,0 +1,38 @@
+@font-face {
+    font-display: swap;
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 300;
+    src: url('/assets/fonts/open-sans-family-300.eot'); /* IE9 Compat Modes */
+    src: url('/assets/fonts/open-sans-family-300-d700aca586.eot#iefix') format('embedded-opentype'), 
+    url('/assets/fonts/open-sans-family-300.woff2') format('woff2'), 
+    url('/assets/fonts/open-sans-family-300.woff') format('woff'), 
+    url('/assets/fonts/open-sans-family-300.ttf') format('truetype'), 
+    url('/assets/images/open-sans-family-300.svg#OpenSans') format('svg'); /* Legacy iOS */
+}
+
+@font-face {
+    font-display: swap;
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 400;
+    src: url('/assets/fonts/open-sans-family-regular.eot'); /* IE9 Compat Modes */
+    src: url('/assets/fonts/open-sans-family-regular-31644e663c.eot#iefix') format('embedded-opentype'), 
+    url('/assets/fonts/open-sans-family-regular.woff2') format('woff2'), 
+    url('/assets/fonts/open-sans-family-regular.woff') format('woff'), 
+    url('/assets/fonts/open-sans-family-regular.ttf') format('truetype'), 
+    url('/assets/images/open-sans-family-regular.svg#OpenSans') format('svg'); /* Legacy iOS */
+}
+
+@font-face {
+    font-display: swap;
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 600;
+    src: url('/assets/fonts/open-sans-family-600.eot'); /* IE9 Compat Modes */
+    src: url('/assets/fonts/open-sans-family-600-af709fa9e1.eot#iefix') format('embedded-opentype'), 
+    url('/assets/fonts/open-sans-family-600.woff2') format('woff2'), 
+    url('/assets/fonts/open-sans-family-600.woff') format('woff'), 
+    url('/assets/fonts/open-sans-family-600.ttf') format('truetype'), 
+    url('/assets/images/open-sans-family-600.svg#OpenSans') format('svg'); /* Legacy iOS */
+}

@@ -1,0 +1,4 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+{% macro field(name,label,type='text',value='',required=true) %}<label>{{ label }}<input name="{{ name }}" type="{{ type }}" value="{{ value }}" {% if required %}required{% endif %} {% if type=='password' %}minlength="12" maxlength="128" autocomplete="current-password"{% endif %}></label>{% endmacro %}
+{% macro confirm() %}<label>Confirm your administrator password<input type="password" name="current_password" required autocomplete="current-password"></label>{% endmacro %}
+{% macro empty(message='Nothing here yet.') %}<div class="empty"><span class="empty-icon">◇</span><h3>{{ message }}</h3><p>Your records will appear here as you use Noryx Hosting.</p></div>{% endmacro %}

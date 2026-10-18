@@ -1,0 +1,9 @@
+[Unit]
+Description=Queue Noryx email outbox
+[Service]
+Type=oneshot
+User=noryx
+Group=noryx
+WorkingDirectory=/opt/noryx/app
+EnvironmentFile=/etc/noryx.env
+ExecStart=/opt/noryx/venv/bin/flask --app wsgi dispatch-mail

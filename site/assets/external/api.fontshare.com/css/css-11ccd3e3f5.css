@@ -1,0 +1,39 @@
+/* Satoshi */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/assets/external/cdn.fontshare.com/fonts/KFIAZD4RUMEZIYV6FQ3T3GP5PDBDB6JY.woff2') format('woff2'),
+       url('/assets/external/cdn.fontshare.com/fonts/KFIAZD4RUMEZIYV6FQ3T3GP5PDBDB6JY.woff') format('woff'),
+       url('/assets/external/cdn.fontshare.com/fonts/KFIAZD4RUMEZIYV6FQ3T3GP5PDBDB6JY.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/assets/external/cdn.fontshare.com/fonts/7AHDUZ4A7LFLVFUIFSARGIWCRQJHISQP.woff2') format('woff2'),
+       url('/assets/external/cdn.fontshare.com/fonts/7AHDUZ4A7LFLVFUIFSARGIWCRQJHISQP.woff') format('woff'),
+       url('/assets/external/cdn.fontshare.com/fonts/7AHDUZ4A7LFLVFUIFSARGIWCRQJHISQP.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/assets/external/cdn.fontshare.com/fonts/GHM6WVH6MILNYOOCXHXB5GTSGNTMGXZR.woff2') format('woff2'),
+       url('/assets/external/cdn.fontshare.com/fonts/GHM6WVH6MILNYOOCXHXB5GTSGNTMGXZR.woff') format('woff'),
+       url('/assets/external/cdn.fontshare.com/fonts/GHM6WVH6MILNYOOCXHXB5GTSGNTMGXZR.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/assets/external/cdn.fontshare.com/fonts/J64QX5IPOHK56I2KYUNBQ5M2XWZEYKYX.woff2') format('woff2'),
+       url('/assets/external/cdn.fontshare.com/fonts/J64QX5IPOHK56I2KYUNBQ5M2XWZEYKYX.woff') format('woff'),
+       url('/assets/external/cdn.fontshare.com/fonts/J64QX5IPOHK56I2KYUNBQ5M2XWZEYKYX.ttf') format('truetype');
+  font-weight: 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+

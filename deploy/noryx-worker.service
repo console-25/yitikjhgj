@@ -1,0 +1,18 @@
+[Unit]
+Description=Noryx Hosting mail worker
+After=network.target redis-server.service postgresql.service
+[Service]
+User=noryx
+Group=noryx
+WorkingDirectory=/opt/noryx/app
+EnvironmentFile=/etc/noryx.env
+ExecStart=/opt/noryx/venv/bin/rq worker --url ${REDIS_URL} mail
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/noryx/app/instance
+[Install]
+WantedBy=multi-user.target

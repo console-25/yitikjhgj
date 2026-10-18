@@ -1,0 +1,248 @@
+:root {
+  --color-primary: #2563eb;
+  --color-accent: #60a5fa;
+  --color-warning: #f59e0b;
+  --button-secondary: #4b5563;
+
+  /* Text Colors */
+  --color-text: #ffffff;
+  --color-text-secondary: var(--color-primary);
+
+  /* Background Colors */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-input: #131c2f;
+  --color-border: #334155;
+
+  /* Additional Properties */
+  --border-radius: 30px;
+}
+
+/* ==========================================================================
+       Text & Label Styling
+       ========================================================================== */
+#order-standard_cart .field,
+#order-standard_cart .form-control {
+  color: #fff !important;
+}
+
+#order-standard_cart .sub-heading span,
+#order-standard_cart .sub-heading-borderless span,
+#order-standard_cart .products .product header span,
+a.list-group-item {
+  color: var(--color-text);
+}
+
+#order-standard_cart .panel-addon .panel-body label,
+#order-standard_cart label {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 1.2em;
+}
+
+#order-standard_cart .products .product div.product-desc {
+  font-size: 1em;
+  font-weight: 600;
+}
+
+#order-standard_cart .products .product div.product-pricing span.price {
+  font-weight: 600;
+}
+
+#order-standard_cart .field-help-text {
+  color: var(--color-warning);
+}
+
+#order-standard_cart .order-summary .btn-continue-shopping {
+  color: var(--color-text);
+}
+
+#order-standard_cart .checkout-security-msg {
+  font-size: 14px;
+}
+
+.service-renewals .div-renewal-ineligible,
+#order-standard_cart .btn-remove-from-cart {
+  color: var(--color-warning);
+}
+
+.alert-warning .alert-link {
+  color: var(--color-accent);
+}
+
+/* ==========================================================================
+       Background Colors
+       ========================================================================== */
+#order-standard_cart .product-info,
+#order-standard_cart .order-summary,
+#order-standard_cart .products .product header,
+#order-standard_cart .field,
+#order-standard_cart .form-control,
+.addon-renewals .service-renewal,
+#order-standard_cart .apply-credit-container,
+#order-standard_cart .panel-addon .panel-price,
+#order-standard_cart .view-cart-items-header,
+#order-standard_cart .view-cart-items .item:nth-child(2n),
+#order-standard_cart .view-cart-promotion-code,
+.panel-sidebar>.panel-heading {
+  background-color: var(--color-bg-secondary);
+}
+
+#order-standard_cart .summary-container,
+#order-standard_cart .products .product,
+#order-standard_cart .view-cart-tabs .tab-content,
+#order-standard_cart .view-cart-items .item,
+.domain-renewals,
+.panel {
+  background-color: var(--color-bg-primary);
+}
+
+.product-recommendations .product-recommendation {
+  background-color: var(--color-bg-primary);
+  border-color: var(--color-primary);
+}
+
+#order-standard_cart .view-cart-tabs .nav-tabs a[aria-expanded="true"] {
+  background-color: var(--color-bg-secondary);
+}
+
+#order-standard_cart .view-cart-tabs .nav-tabs a[aria-expanded=true],
+#order-standard_cart .view-cart-tabs .nav-tabs a[aria-selected=true] {
+  border: none;
+}
+
+.domain-pricing .tld-row.highlighted,
+.domain-checker-container .input-group-box {
+  background: var(--color-bg-secondary);
+}
+
+.domain-pricing .tld-pricing-header .col-xs-4 {
+  border-bottom: 6px var(--color-accent);
+  background-color: var(--color-bg-secondary);
+}
+
+.domain-pricing .tld-pricing-header div:nth-child(2n + 1) {
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.domain-promo-box {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+}
+
+.service-renewals {
+  background-color: var(--color-bg-primary) !important;
+}
+
+/* ==========================================================================
+       Borders & Structural Elements
+       ========================================================================== */
+#order-standard_cart .product-info {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+#order-standard_cart .view-cart-promotion-code {
+  border: 1px solid var(--color-accent);
+}
+
+#order-standard_cart .sub-heading span,
+#order-standard_cart .sub-heading-borderless span,
+#order-standard_cart .field,
+#order-standard_cart .form-control,
+#order-standard_cart .form-control:focus,
+#order-standard_cart .products .product {
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+}
+
+#order-standard_cart .sub-heading {
+  border-top: 1px solid var(--color-border);
+}
+
+#order-standard_cart .panel-addon-selected {
+  border-color: var(--color-border);
+}
+
+#order-standard_cart .products .product header {
+  border-radius: 30px 30px 0 0;
+}
+
+.panel-sidebar {
+  border: none;
+}
+
+#order-standard_cart .view-cart-items {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+#order-standard_cart .order-summary {
+  border-bottom: 3px solid var(--color-border) !important;
+  border-bottom: 3px solid var(--color-primary);
+}
+
+#order-standard_cart .order-summary .summary-totals {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+#order-standard_cart .account-select-container {
+  border-right: none !important;
+}
+
+.domain-renewals .domain-renewal,
+.service-renewals .service-renewal,
+#order-standard_cart .order-summary .subtotal,
+#order-standard_cart .view-cart-items,
+.domain-pricing .tld-row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.domain-renewals,
+.service-renewals {
+  border-top: 1px solid var(--color-border);
+}
+
+.domain-pricing .two-row-center {
+  border-right: 2px solid var(--color-border);
+}
+
+/* ==========================================================================
+       Account & Checkout Components
+       ========================================================================== */
+#order-standard_cart .account-select-container div.account.active {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+}
+
+#order-standard_cart .account-select-container div.account {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+  margin: 3px 3px 0 0;
+}
+
+#order-standard_cart .cc-input-container {
+  background-color: var(--color-bg-primary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+  margin-bottom: 10px;
+}
+
+#btnNewUserSignup {
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
+
+#order-standard_cart .empty-cart .btn {
+  background-color: var(--color-warning);
+}
+
+.service-renewals .service-renewal .label {
+  border-radius: var(--border-radius);
+}

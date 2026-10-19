@@ -53,6 +53,8 @@ def create_app(config=None):
     app.before_request(load_user)
     from .routes import web
     app.register_blueprint(web)
+    from .workspace import workspace, preference
+    app.register_blueprint(workspace)
     from .cli import register_commands
     register_commands(app)
     with app.app_context():
@@ -62,7 +64,12 @@ def create_app(config=None):
     @app.context_processor
     def common():
         return {'current_user':getattr(g,'user',None), 'permissions':PERMISSIONS.get(g.user.role,set()) if getattr(g,'user',None) else set(),
+                'workspace_name':preference('site_name','Noryx Hosting'),'workspace_timezone':preference('timezone','UTC'),
                 'development':app.config['ENVIRONMENT']!='production','current_year':datetime.now(timezone.utc).year}
+    @app.template_filter('localdate')
+    def localdate(value):
+        from zoneinfo import ZoneInfo
+        return value.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(preference('timezone','UTC'))).strftime('%b %d, %Y · %H:%M') if value else '—'
     @app.template_filter('money')
     def money(v): return f'{v//100:,}.{v%100:02d}' if v>=0 else '-'+money(-v)
     @app.after_request

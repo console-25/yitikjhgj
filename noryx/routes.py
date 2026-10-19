@@ -31,11 +31,15 @@ def email_input():
 def dashboard_url(user): return '/admin/dashboard' if user.role!='client' else '/client/dashboard'
 def rows(model,limit=200): return db.session.scalars(db.select(model).order_by(model.id.desc()).limit(limit)).all()
 
+def _public_url():
+    from .workspace import preference
+    return preference('public_url',current_app.config['PUBLIC_URL'])
+
 def _queue_password_reset(user):
     token=secrets.token_urlsafe(48)
     db.session.execute(db.update(PasswordReset).where(PasswordReset.user_id==user.id).values(used=True))
     db.session.add(PasswordReset(token_hash=digest(token),user_id=user.id,expires_at=now()+timedelta(minutes=30)))
-    link=current_app.config['PUBLIC_URL'].rstrip('/')+'/reset-password?token='+token
+    link=_public_url().rstrip('/')+'/reset-password?token='+token
     db.session.add(EmailJob(recipient=user.email,subject='Set or reset your Noryx Hosting password',body='Use this secure link within 30 minutes: '+link))
     return token
 
@@ -57,6 +61,8 @@ def login():
 @web.route('/register',methods=['GET','POST'])
 @limiter.limit('5 per hour',methods=['POST'])
 def register():
+    from .workspace import preference
+    if not preference("registration_open",True): abort(403,"Registration is currently closed.")
     if request.method=='POST':
         email=email_input(); name=textfield('name',100); password=request.form.get('password','')
         if not password_valid(password):
@@ -81,7 +87,7 @@ def forgot():
             token=secrets.token_urlsafe(48)
             db.session.execute(db.update(PasswordReset).where(PasswordReset.user_id==user.id).values(used=True))
             db.session.add(PasswordReset(token_hash=digest(token),user_id=user.id,expires_at=now()+timedelta(minutes=30)))
-            link=current_app.config['PUBLIC_URL'].rstrip('/')+'/reset-password?token='+token
+            link=_public_url().rstrip('/')+'/reset-password?token='+token
             db.session.add(EmailJob(recipient=email,subject='Reset your Noryx Hosting password',body='Reset your password within 30 minutes: '+link))
             audit('auth.reset_requested',actor=user.id); db.session.commit()
         flash('If the account is eligible, a reset email has been queued.'); return redirect('/forgot-password')
@@ -121,7 +127,7 @@ def client_dashboard():
         'Open tickets':db.session.scalar(db.select(func.count()).select_from(Ticket).where(Ticket.user_id==uid,Ticket.status.not_in(['closed','resolved']))),
     }
     return render_template('dashboard.html',title='Your hosting, at a glance',stats=stats,
-        announcements=db.session.scalars(db.select(Announcement).where(Announcement.publish_at<=now()).order_by(Announcement.pinned.desc(),Announcement.id.desc()).limit(10)).all(),
+        announcements=db.session.scalars(db.select(Announcement).where(Announcement.publish_at<=now(),Announcement.archived.is_(False)).order_by(Announcement.pinned.desc(),Announcement.id.desc()).limit(10)).all(),
         active_services=db.session.scalars(db.select(Service).where(Service.user_id==uid,Service.status=='active').order_by(Service.next_due).limit(5)).all(),
         recent_orders=db.session.scalars(db.select(Order).where(Order.user_id==uid).order_by(Order.id.desc()).limit(5)).all(),
         recent_invoices=db.session.scalars(db.select(Invoice).where(Invoice.user_id==uid).order_by(Invoice.id.desc()).limit(5)).all())
@@ -132,7 +138,7 @@ def catalog():
     for field in ('category_id','location_id','processor_id'):
         value=request.args.get(field,type=int)
         if value: query=query.where(getattr(Plan,field)==value)
-    return render_template('catalog.html',title='Find your next hosting plan',plans=db.session.scalars(query.order_by(Plan.id)).all(),categories=rows(Category),locations=rows(Location),processors=rows(Processor))
+    return render_template('catalog.html',title='Find your next hosting plan',plans=db.session.scalars(query.order_by(Plan.display_order,Plan.id)).all(),categories=rows(Category),locations=rows(Location),processors=rows(Processor))
 
 @web.get('/api/catalog')
 def catalog_api():
@@ -237,10 +243,19 @@ def ticket_detail(ident):
             internal=staff and request.form.get('internal')=='on'
             db.session.add(TicketReply(ticket_id=ident,user_id=g.user.id,body=textfield('body',10000),internal=internal))
             if not internal: ticket.status='awaiting_customer' if staff else 'awaiting_staff'
+        elif action=='manage':
+            if not staff: abort(403)
+            priority=request.form.get('priority'); status=request.form.get('status')
+            if priority not in ('low','normal','high','urgent') or status not in ('awaiting_staff','awaiting_customer','resolved','closed'): abort(400)
+            assigned=request.form.get('assigned_id',type=int)
+            if assigned:
+                agent=db.get_or_404(User,assigned)
+                if agent.suspended or agent.deleted_at or 'support' not in PERMISSIONS.get(agent.role,set()): abort(400,'Choose an active support team member.')
+            ticket.priority=priority; ticket.status=status; ticket.assigned_id=assigned
         elif action in ('close','reopen'): ticket.status='closed' if action=='close' else 'awaiting_staff'
         else: abort(400)
         audit('ticket.'+action,ident); db.session.commit(); return redirect(request.path)
-    return render_template('ticket.html',title=ticket.subject,ticket=ticket,staff=staff,replies=[r for r in ticket.replies if staff or not r.internal])
+    return render_template('ticket.html',title=ticket.subject,ticket=ticket,staff=staff,staff_members=db.session.scalars(db.select(User).where(User.role.in_(['super_admin','admin','support']),User.suspended.is_(False),User.deleted_at.is_(None))).all() if staff else [],replies=[r for r in ticket.replies if staff or not r.internal])
 
 @web.route('/client/account',methods=['GET','POST'])
 @required()
@@ -271,16 +286,18 @@ def knowledgebase():
 @web.get('/admin/dashboard')
 @required()
 def admin_dashboard():
+    from .workspace import dashboard_metrics
+    metrics=dashboard_metrics()
     if g.user.role=='client': abort(403)
     stats={'Registered users':db.session.scalar(db.select(func.count()).select_from(User).where(User.deleted_at.is_(None))),
         'Active services':db.session.scalar(db.select(func.count()).select_from(Service).where(Service.status=='active')),
         'Pending orders':db.session.scalar(db.select(func.count()).select_from(Order).where(Order.status.in_(['paid','awaiting_payment']))),
         'Unpaid invoices':db.session.scalar(db.select(func.count()).select_from(Invoice).where(Invoice.status=='unpaid')),
         'Open tickets':db.session.scalar(db.select(func.count()).select_from(Ticket).where(Ticket.status.not_in(['closed','resolved']))),
-        'Revenue recorded':db.session.scalar(db.select(func.coalesce(func.sum(Payment.amount),0))) or 0}
-    return render_template('dashboard.html',title='Operations overview',stats=stats,announcements=[],
+        'Revenue recorded':metrics['total_revenue']}
+    return render_template('dashboard.html',title='Operations overview',stats=stats,announcements=[],**metrics,
         recent_orders=db.session.scalars(db.select(Order).order_by(Order.id.desc()).limit(6)).all(),
-        recent_tickets=db.session.scalars(db.select(Ticket).order_by(Ticket.id.desc()).limit(5)).all(),
+        recent_tickets=db.session.scalars(db.select(Ticket).where(Ticket.status.not_in(['closed','resolved'])).order_by(Ticket.id.desc()).limit(5)).all(),
         recent_users=db.session.scalars(db.select(User).where(User.deleted_at.is_(None)).order_by(User.id.desc()).limit(5)).all())
 
 @web.route('/admin/users',methods=['GET','POST'])
@@ -346,6 +363,10 @@ def admin_users():
     return render_template('users.html',title='User management',users=users,q=q,roles=PERMISSIONS,page=page,pages=max(1,(total+per_page-1)//per_page),total=total,sort=request.args.get('sort','id'),direction=direction,status=status,stats={'Total users':total_users,'Active users':active_users,'Suspended':suspended_users,'New this month':new_users},services=services,orders=orders)
 
 def _ensure_admin_survives(user,new_role,new_suspended):
+    if user.id==g.user.id and (new_suspended or new_role!=user.role): abort(409,'You cannot suspend or demote your own active account.')
+    if user.role=='super_admin' and (new_role!='super_admin' or new_suspended):
+        remaining=db.session.scalar(db.select(func.count()).select_from(User).where(User.id!=user.id,User.role=='super_admin',User.suspended.is_(False),User.deleted_at.is_(None))) or 0
+        if remaining<1: abort(409,'Keep at least one active Super Admin.')
     if user.role in ('admin','super_admin') and not user.suspended and (new_role not in ('admin','super_admin') or new_suspended):
         remaining=db.session.scalar(db.select(func.count()).select_from(User).where(User.id!=user.id,User.role.in_(['admin','super_admin']),User.suspended.is_(False),User.deleted_at.is_(None))) or 0
         if remaining<1: abort(409,'Keep at least one active privileged administrator.')
@@ -481,7 +502,7 @@ def admin_catalog():
         audit('catalog.'+kind)
         try: db.session.commit()
         except Exception: db.session.rollback(); abort(409,'A record with this name already exists.')
-        return redirect(request.path)
+        return redirect(request.full_path)
     return render_template('admin_catalog.html',title='Hosting catalog',plans=rows(Plan),categories=rows(Category),locations=rows(Location),processors=rows(Processor))
 
 @web.route('/admin/plans/new',methods=['GET','POST'],defaults={'ident':None})
@@ -499,6 +520,8 @@ def admin_plan(ident):
         status=request.form.get('status')
         if status not in ('review','published','hidden','archived'): abort(400)
         plan.status=status; plan.stock=integer('stock',0,100000)
+        plan.featured=request.form.get('featured')=='on'
+        plan.display_order=integer('display_order',0,100000) if 'display_order' in request.form else (plan.display_order or 0)
         try:
             specifications=json.loads(request.form.get('specifications','{}'))
             if not isinstance(specifications,dict) or len(str(specifications))>8000: raise ValueError()
@@ -514,16 +537,27 @@ def admin_plan(ident):
         price.amount=integer('amount'); price.setup_fee=integer('setup_fee'); price.currency=currency
         plan.revision=(plan.revision or 0)+1
         db.session.flush(); db.session.expire(plan)
-        db.session.add(ProductRevision(plan_id=plan.id,snapshot=snapshot(plan,price)))
+        db.session.add(ProductRevision(plan_id=plan.id,snapshot={**snapshot(plan,price),'edited_by':g.user.id}))
         audit('plan.saved',plan.id); db.session.commit(); flash('Plan saved. Published changes are live in the catalog.')
         return redirect('/admin/catalog')
     revisions=db.session.scalars(db.select(ProductRevision).where(ProductRevision.plan_id==plan.id).order_by(ProductRevision.id.desc()).limit(30)).all() if ident else []
-    return render_template('plan.html',title='Edit hosting plan' if ident else 'New hosting plan',plan=plan,categories=rows(Category),locations=rows(Location),processors=rows(Processor),cycles=CYCLES,revisions=revisions)
+    return render_template('plan.html',title='Edit hosting plan' if ident else 'New hosting plan',plan=plan,categories=rows(Category),locations=rows(Location),processors=rows(Processor),cycles=CYCLES,revisions=revisions,available_plans=rows(Plan))
 
 @web.get('/admin/orders')
 @required('billing')
 def admin_orders():
-    return render_template('admin_orders.html',title='Orders & payment review',orders=rows(Order),invoices=rows(Invoice))
+    query=db.select(Order).join(User,Order.user_id==User.id)
+    q=request.args.get('q','').strip()[:100]; status=request.args.get('status',''); sort=request.args.get('sort','newest')
+    if q:
+        conditions=[User.name.ilike('%'+q+'%'),User.email.ilike('%'+q+'%'),Order.snapshot['name'].as_string().ilike('%'+q+'%')]
+        if q.lstrip('#').isdigit(): conditions.append(Order.id==int(q.lstrip('#')))
+        query=query.where(or_(*conditions))
+    if status in ('awaiting_payment','paid','active','cancelled'): query=query.where(Order.status==status)
+    total=db.session.scalar(db.select(func.count()).select_from(query.subquery()))
+    pages=max(1,(total+24)//25); page=max(1,min(request.args.get('page',1,type=int),pages))
+    ordering={'newest':Order.id.desc(),'oldest':Order.id.asc(),'amount_high':Order.total.desc(),'amount_low':Order.total.asc()}.get(sort,Order.id.desc())
+    orders=db.session.scalars(query.order_by(ordering,Order.id).offset((page-1)*25).limit(25)).all()
+    return render_template('admin_orders.html',title='Orders & payment review',orders=orders,total=total,pages=pages,page=page,q=q,status=status,sort=sort)
 
 @web.post('/admin/invoices/<int:ident>/payment')
 @required('billing')
@@ -581,8 +615,9 @@ def content():
             try: item.publish_at=datetime.fromisoformat(request.form.get('publish_at',''))
             except ValueError: abort(400,'Enter a valid publication date and time in UTC.')
             item.pinned=request.form.get('pinned')=='on'
-        db.session.add(item); audit('content.'+kind); db.session.commit(); return redirect(request.path)
-    return render_template('content.html',title='Announcements & knowledgebase',articles=rows(Article),announcements=rows(Announcement))
+            item.archived=request.form.get('archived')=='on'
+        db.session.add(item); audit('content.'+kind); db.session.commit(); return redirect(request.full_path)
+    return render_template('content.html',title='Announcements & knowledgebase',articles=rows(Article),announcements=rows(Announcement),utc_now=now())
 
 @web.route('/admin/coupons',methods=['GET','POST'])
 @required('billing')

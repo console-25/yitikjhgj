@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% from 'macros.html' import csrf,empty %}{% from 'ui.html' import heading,badge %}{% block content %}<div class='page-heading'><div><p class='eyebrow'>WORKSPACE / ANALYTICS</p><h1>{{ title }}</h1><p class='muted'>Recorded payments and active services from your database.</p></div></div>{% include 'charts.html' %}{% endblock %}

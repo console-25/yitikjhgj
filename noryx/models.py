@@ -87,6 +87,8 @@ class Plan(db.Model):
     status = db.Column(db.String(20), nullable=False, default='review')
     stock = db.Column(db.Integer, nullable=False, default=0)
     revision = db.Column(db.Integer, nullable=False, default=1)
+    featured = db.Column(db.Boolean, nullable=False, default=False)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
     source_evidence = db.Column(db.Text, default='')
     category = db.relationship(Category)
     location = db.relationship(Location)
@@ -185,8 +187,11 @@ class Ticket(db.Model):
     subject = db.Column(db.String(200), nullable=False)
     department = db.Column(db.String(30), nullable=False)
     status = db.Column(db.String(30), nullable=False, default='awaiting_staff')
+    priority = db.Column(db.String(12), nullable=False, default='normal')
+    assigned_id = db.Column(db.ForeignKey('user.id'))
+    assignee = db.relationship(User, foreign_keys=[assigned_id])
     created_at = db.Column(db.DateTime, nullable=False, default=now)
-    user = db.relationship(User)
+    user = db.relationship(User, foreign_keys=[user_id])
     replies = db.relationship('TicketReply', backref='ticket', order_by='TicketReply.id')
 
 class TicketReply(db.Model):
@@ -203,6 +208,7 @@ class Announcement(db.Model):
     title = db.Column(db.String(200), nullable=False)
     body = db.Column(db.Text, nullable=False)
     publish_at = db.Column(db.DateTime, nullable=False, default=now)
+    archived = db.Column(db.Boolean, nullable=False, default=False)
     pinned = db.Column(db.Boolean, nullable=False, default=False)
 
 class Article(db.Model):
@@ -220,3 +226,17 @@ class EmailJob(db.Model):
     state = db.Column(db.String(20), nullable=False, default='pending')
     attempts = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, nullable=False, default=now)
+
+class WorkspaceSetting(db.Model):
+    key = db.Column(db.String(60), primary_key=True)
+    value = db.Column(db.JSON, nullable=False)
+    updated_at = db.Column(db.DateTime, nullable=False, default=now, onupdate=now)
+
+class PlanAddon(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500), nullable=False, default='')
+    amount = db.Column(db.Integer, nullable=False, default=0)
+    currency = db.Column(db.String(3), nullable=False, default='INR')
+    active = db.Column(db.Boolean, nullable=False, default=False)
+    __table_args__ = (CheckConstraint('amount >= 0'),)

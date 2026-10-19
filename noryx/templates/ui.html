@@ -1,0 +1,5 @@
+{% macro icon(name) %}<svg class="icon" aria-hidden="true"><use href="/panel-assets/icons.svg#{{ name }}"></use></svg>{% endmacro %}
+{% macro navlink(href,label,glyph) %}<a href="{{ href }}" title="{{ label }}"><span class="nav-icon">{{ icon(glyph) }}</span><span class="nav-text">{{ label }}</span></a>{% endmacro %}
+{% macro heading(title,description='',eyebrow='NORYX WORKSPACE') %}<div class="page-heading"><div><p class="eyebrow">{{ eyebrow }}</p><h1>{{ title }}</h1><p class="muted">{{ description }}</p></div></div>{% endmacro %}
+{% macro badge(value) %}<span class="status-pill status-{{ value }}"><i></i>{{ value.replace('_',' ')|title }}</span>{% endmacro %}
+{% macro tabletools(text='Search records…') %}<div class="data-tools"><input type="search" data-table-search placeholder="{{ text }}" aria-label="{{ text }}"><select data-table-sort aria-label="Sort records"><option value="">Default order</option><option value="asc">A → Z</option><option value="desc">Z → A</option></select></div>{% endmacro %}

@@ -39,6 +39,7 @@ def register_commands(app):
         service_ids=db.select(Service.id).where(Service.user_id.in_(ids)); ticket_ids=db.select(Ticket.id).where(Ticket.user_id.in_(ids))
         db.session.execute(db.delete(ServiceRequest).where(ServiceRequest.service_id.in_(service_ids)))
         db.session.execute(db.delete(TicketReply).where(TicketReply.ticket_id.in_(ticket_ids)|TicketReply.user_id.in_(ids)))
+        db.session.execute(db.update(Ticket).where(Ticket.assigned_id.in_(ids)).values(assigned_id=None))
         for model in (Ticket,Service): db.session.execute(db.delete(model).where(model.user_id.in_(ids)))
         db.session.execute(db.delete(Payment).where(Payment.invoice_id.in_(invoice_ids)))
         db.session.execute(db.delete(Invoice).where(Invoice.user_id.in_(ids)))
